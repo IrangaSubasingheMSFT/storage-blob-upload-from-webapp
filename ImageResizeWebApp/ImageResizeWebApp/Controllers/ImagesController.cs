@@ -1,4 +1,4 @@
-﻿using ImageResizeWebApp.Helpers;
+using ImageResizeWebApp.Helpers;
 using ImageResizeWebApp.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +13,6 @@ namespace ImageResizeWebApp.Controllers
     [Route("api/[controller]")]
     public class ImagesController : Controller
     {
-        // make sure that appsettings.json is filled with the necessary details of the azure storage
         private readonly AzureStorageConfig storageConfig = null;
 
         public ImagesController(IOptions<AzureStorageConfig> config)
@@ -31,9 +30,6 @@ namespace ImageResizeWebApp.Controllers
             {
                 if (files.Count == 0)
                     return BadRequest("No files received from the upload");
-
-                if (storageConfig.AccountKey == string.Empty || storageConfig.AccountName == string.Empty)
-                    return BadRequest("sorry, can't retrieve your azure storage details from appsettings.js, make sure that you add azure storage details there");
 
                 if (storageConfig.ImageContainer == string.Empty)
                     return BadRequest("Please provide a name for your image container in the azure blob storage");
@@ -78,9 +74,6 @@ namespace ImageResizeWebApp.Controllers
         {
             try
             {
-                if (storageConfig.AccountKey == string.Empty || storageConfig.AccountName == string.Empty)
-                    return BadRequest("Sorry, can't retrieve your Azure storage details from appsettings.js, make sure that you add Azure storage details there.");
-
                 if (storageConfig.ImageContainer == string.Empty)
                     return BadRequest("Please provide a name for your image container in Azure blob storage.");
 
