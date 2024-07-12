@@ -1,96 +1,72 @@
-﻿using ImageResizeWebApp.Helpers;
-using ImageResizeWebApp.Models;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
+```csharp
+using Azure.Identity;
+using Azure.Storage.Blobs;
 
-namespace ImageResizeWebApp.Controllers
+public ImagesController(IOptions<AzureStorageConfig> config)
 {
-    [Route("api/[controller]")]
-    public class ImagesController : Controller
+    storageConfig = config.Value;
+    blobServiceClient = new BlobServiceClient(new Uri($"https://{storageConfig.AccountName}.blob.core.windows.net/"), new DefaultAzureCredential());
+}
+
+public async Task<IActionResult> Upload(ICollection<IFormFile> files)
+{
+    bool isUploaded = false;
+
+    try
     {
-        // make sure that appsettings.json is filled with the necessary details of the azure storage
-        private readonly AzureStorageConfig storageConfig = null;
+        if (files.Count == 0)
+            return BadRequest("No files received from the upload");
 
-        public ImagesController(IOptions<AzureStorageConfig> config)
+        if (storageConfig.ImageContainer == string.Empty)
+            return BadRequest("Please provide a name for your image container in the azure blob storage");
+
+        foreach (var formFile in files)
         {
-            storageConfig = config.Value;
-        }
-
-        // POST /api/images/upload
-        [HttpPost("[action]")]
-        public async Task<IActionResult> Upload(ICollection<IFormFile> files)
-        {
-            bool isUploaded = false;
-
-            try
+            if (StorageHelper.IsImage(formFile))
             {
-                if (files.Count == 0)
-                    return BadRequest("No files received from the upload");
-
-                if (storageConfig.AccountKey == string.Empty || storageConfig.AccountName == string.Empty)
-                    return BadRequest("sorry, can't retrieve your azure storage details from appsettings.js, make sure that you add azure storage details there");
-
-                if (storageConfig.ImageContainer == string.Empty)
-                    return BadRequest("Please provide a name for your image container in the azure blob storage");
-
-                foreach (var formFile in files)
+                if (formFile.Length > 0)
                 {
-                    if (StorageHelper.IsImage(formFile))
+                    using (Stream stream = formFile.OpenReadStream())
                     {
-                        if (formFile.Length > 0)
-                        {
-                            using (Stream stream = formFile.OpenReadStream())
-                            {
-                                isUploaded = await StorageHelper.UploadFileToStorage(stream, formFile.FileName, storageConfig);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        return new UnsupportedMediaTypeResult();
+                        isUploaded = await StorageHelper.UploadFileToStorage(stream, formFile.FileName, storageConfig, blobServiceClient);
                     }
                 }
-
-                if (isUploaded)
-                {
-                    if (storageConfig.ThumbnailContainer != string.Empty)
-                        return new AcceptedAtActionResult("GetThumbNails", "Images", null, null);
-                    else
-                        return new AcceptedResult();
-                }
-                else
-                    return BadRequest("Look like the image couldnt upload to the storage");
             }
-            catch (Exception ex)
+            else
             {
-                return BadRequest(ex.Message);
+                return new UnsupportedMediaTypeResult();
             }
         }
 
-        // GET /api/images/thumbnails
-        [HttpGet("thumbnails")]
-        public async Task<IActionResult> GetThumbNails()
+        if (isUploaded)
         {
-            try
-            {
-                if (storageConfig.AccountKey == string.Empty || storageConfig.AccountName == string.Empty)
-                    return BadRequest("Sorry, can't retrieve your Azure storage details from appsettings.js, make sure that you add Azure storage details there.");
-
-                if (storageConfig.ImageContainer == string.Empty)
-                    return BadRequest("Please provide a name for your image container in Azure blob storage.");
-
-                List<string> thumbnailUrls = await StorageHelper.GetThumbNailUrls(storageConfig);
-                return new ObjectResult(thumbnailUrls);            
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            if (storageConfig.ThumbnailContainer != string.Empty)
+                return new AcceptedAtActionResult("GetThumbNails", "Images", null, null);
+            else
+                return new AcceptedResult();
         }
+        else
+            return BadRequest("Look like the image couldn't upload to the storage");
+    }
+    catch (Exception ex)
+    {
+        return BadRequest(ex.Message);
     }
 }
+
+public async Task<IActionResult> GetThumbNails()
+{
+    try
+    {
+        if (storageConfig.ImageContainer == string.Empty)
+            return BadRequest("Please provide a name for your image container in Azure blob storage.");
+
+        List<string> thumbnailUrls = await StorageHelper.GetThumbNailUrls(storageConfig, blobServiceClient);
+        return new ObjectResult(thumbnailUrls);            
+    }
+    catch (Exception ex)
+    {
+        return BadRequest(ex.Message);
+    }
+}
+```

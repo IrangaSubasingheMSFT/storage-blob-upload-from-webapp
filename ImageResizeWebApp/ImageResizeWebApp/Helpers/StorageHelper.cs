@@ -1,7 +1,6 @@
-﻿using Azure.Storage;
+```csharp
+using Azure.Identity;
 using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
-using ImageResizeWebApp.Models;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
@@ -13,7 +12,6 @@ namespace ImageResizeWebApp.Helpers
 {
     public static class StorageHelper
     {
-
         public static bool IsImage(IFormFile file)
         {
             if (file.ContentType.Contains("image"))
@@ -26,8 +24,7 @@ namespace ImageResizeWebApp.Helpers
             return formats.Any(item => file.FileName.EndsWith(item, StringComparison.OrdinalIgnoreCase));
         }
 
-        public static async Task<bool> UploadFileToStorage(Stream fileStream, string fileName,
-                                                            AzureStorageConfig _storageConfig)
+        public static async Task<bool> UploadFileToStorage(Stream fileStream, string fileName, AzureStorageConfig _storageConfig)
         {
             // Create a URI to the blob
             Uri blobUri = new Uri("https://" +
@@ -36,13 +33,8 @@ namespace ImageResizeWebApp.Helpers
                                   _storageConfig.ImageContainer +
                                   "/" + fileName);
 
-            // Create StorageSharedKeyCredentials object by reading
-            // the values from the configuration (appsettings.json)
-            StorageSharedKeyCredential storageCredentials =
-                new StorageSharedKeyCredential(_storageConfig.AccountName, _storageConfig.AccountKey);
-
-            // Create the blob client.
-            BlobClient blobClient = new BlobClient(blobUri, storageCredentials);
+            // Create the blob client using Managed Identity
+            BlobClient blobClient = new BlobClient(blobUri, new DefaultAzureCredential());
 
             // Upload the file
             await blobClient.UploadAsync(fileStream);
@@ -57,8 +49,8 @@ namespace ImageResizeWebApp.Helpers
             // Create a URI to the storage account
             Uri accountUri = new Uri("https://" + _storageConfig.AccountName + ".blob.core.windows.net/");
 
-            // Create BlobServiceClient from the account URI
-            BlobServiceClient blobServiceClient = new BlobServiceClient(accountUri);
+            // Create BlobServiceClient using Managed Identity
+            BlobServiceClient blobServiceClient = new BlobServiceClient(accountUri, new DefaultAzureCredential());
 
             // Get reference to the container
             BlobContainerClient container = blobServiceClient.GetBlobContainerClient(_storageConfig.ThumbnailContainer);
@@ -75,3 +67,4 @@ namespace ImageResizeWebApp.Helpers
         }
     }
 }
+```
