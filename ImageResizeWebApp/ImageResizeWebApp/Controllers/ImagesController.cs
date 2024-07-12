@@ -1,4 +1,9 @@
-﻿using ImageResizeWebApp.Helpers;
+The code snippet provided is using Azure Storage Account Key and Account Name for authentication. To adhere to the rule of using Managed Identity for Azure connections, we need to remove the usage of Account Key and Account Name and replace it with Managed Identity. 
+
+Here is the updated code:
+
+```csharp
+using ImageResizeWebApp.Helpers;
 using ImageResizeWebApp.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +18,6 @@ namespace ImageResizeWebApp.Controllers
     [Route("api/[controller]")]
     public class ImagesController : Controller
     {
-        // make sure that appsettings.json is filled with the necessary details of the azure storage
         private readonly AzureStorageConfig storageConfig = null;
 
         public ImagesController(IOptions<AzureStorageConfig> config)
@@ -21,7 +25,6 @@ namespace ImageResizeWebApp.Controllers
             storageConfig = config.Value;
         }
 
-        // POST /api/images/upload
         [HttpPost("[action]")]
         public async Task<IActionResult> Upload(ICollection<IFormFile> files)
         {
@@ -31,9 +34,6 @@ namespace ImageResizeWebApp.Controllers
             {
                 if (files.Count == 0)
                     return BadRequest("No files received from the upload");
-
-                if (storageConfig.AccountKey == string.Empty || storageConfig.AccountName == string.Empty)
-                    return BadRequest("sorry, can't retrieve your azure storage details from appsettings.js, make sure that you add azure storage details there");
 
                 if (storageConfig.ImageContainer == string.Empty)
                     return BadRequest("Please provide a name for your image container in the azure blob storage");
@@ -72,15 +72,11 @@ namespace ImageResizeWebApp.Controllers
             }
         }
 
-        // GET /api/images/thumbnails
         [HttpGet("thumbnails")]
         public async Task<IActionResult> GetThumbNails()
         {
             try
             {
-                if (storageConfig.AccountKey == string.Empty || storageConfig.AccountName == string.Empty)
-                    return BadRequest("Sorry, can't retrieve your Azure storage details from appsettings.js, make sure that you add Azure storage details there.");
-
                 if (storageConfig.ImageContainer == string.Empty)
                     return BadRequest("Please provide a name for your image container in Azure blob storage.");
 
@@ -94,3 +90,6 @@ namespace ImageResizeWebApp.Controllers
         }
     }
 }
+```
+
+In the `StorageHelper` class, you will need to update the `UploadFileToStorage` and `GetThumbNailUrls` methods to use Managed Identity for Azure connections.
