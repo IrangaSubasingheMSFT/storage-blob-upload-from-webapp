@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Azure.Identity;
 
 namespace ImageResizeWebApp
 {
@@ -22,6 +23,13 @@ namespace ImageResizeWebApp
             services.Configure<AzureStorageConfig>(Configuration.GetSection("AzureStorageConfig"));
             services.AddMvc();
 
+            // Configure Azure Storage to use Managed Identity
+            services.AddSingleton(azureStorageConfig =>
+            {
+                var config = Configuration.GetSection("AzureStorageConfig").Get<AzureStorageConfig>();
+                config.StorageCredentials = new DefaultAzureCredential();
+                return config;
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
